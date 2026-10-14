@@ -182,6 +182,7 @@ if file_sabana and file_pbi26:
                     sec_pbi['% Estabilidad'] = (sec_pbi['PLANTILLA ANTIGUEDAD > 1 AÑO'] / sec_pbi['PLANTILLA ACTIVA N-1'] * 100).fillna(0)
                     sec_pbi = sec_pbi[sec_pbi['PLANTILLA ACTIVA N-1'] > 0].sort_values('% Estabilidad')
                     
+                    # Altura dinámica para que no haya que hacer scroll (Mejora 1)
                     altura_sec = max(400, len(sec_pbi) * 35)
                     fig_bar_sec = px.bar(sec_pbi, x='% Estabilidad', y='SECCION', orientation='h', title='Estabilidad por Sección (PBI)')
                     fig_bar_sec.update_traces(marker_color='#006400')
@@ -193,6 +194,7 @@ if file_sabana and file_pbi26:
                     pue_pbi['% Estabilidad'] = (pue_pbi['PLANTILLA ANTIGUEDAD > 1 AÑO'] / pue_pbi['PLANTILLA ACTIVA N-1'] * 100).fillna(0)
                     pue_pbi = pue_pbi[pue_pbi['PLANTILLA ACTIVA N-1'] > 0].sort_values('% Estabilidad')
                     
+                    # Altura dinámica para que no haya que hacer scroll (Mejora 1)
                     altura_pue = max(400, len(pue_pbi) * 35)
                     fig_bar_pue = px.bar(pue_pbi, x='% Estabilidad', y='PUESTO', orientation='h', title='Estabilidad por Puesto (PBI)')
                     fig_bar_pue.update_traces(marker_color='#2ca02c')
@@ -218,6 +220,7 @@ if file_sabana and file_pbi26:
                     fugas_mostrar = fugas_df[fugas_df['Descripción sección'].isin(secciones_criticas)].copy()
                     
                     if not fugas_mostrar.empty:
+                        # Cálculo de cuándo deja de penalizar (Mejora 2)
                         def calc_fin_penalizacion(fecha_fin):
                             if pd.isna(fecha_fin):
                                 return ""
@@ -232,6 +235,7 @@ if file_sabana and file_pbi26:
                         
                         fugas_mostrar = fugas_mostrar[['Descripción sección', 'Nombre', 'Apellidos', 'Descripción Puesto', 'Causa Baja', '¿Cuándo deja de penalizar?']].sort_values('Descripción sección')
                         
+                        # Filtros interactivos de tabla (Mejora 2)
                         col_f1, col_f2 = st.columns(2)
                         with col_f1:
                             filtro_sec = st.multiselect("Filtrar por Sección", options=sorted(fugas_mostrar['Descripción sección'].unique()))
@@ -256,9 +260,11 @@ if file_sabana and file_pbi26:
                 st.header("👥 Radiografía de la Plantilla Viva")
                 st.markdown("Fuerza de trabajo real activa HOY. *(Excluyendo bajas por Agotamiento IT)*")
                 
+                # Exclusión de Agotamiento IT para el quesito (Mejora 4)
                 activos_analisis = df_sim[(df_sim['Fecha fin'].isna() | (df_sim['Fecha fin'] > hoy)) & (df_sim['Causa Baja'] != 'AGOTAMIENTO IT')].copy()
                 activos_analisis = activos_analisis.drop_duplicates(subset=['Id RH'])
                 
+                # Proporción [2, 1, 1] para hacer el gráfico circular más grande (Mejora 4)
                 c_sec, c_pue, c_ant = st.columns([2, 1, 1])
                 
                 with c_sec:
@@ -316,4 +322,12 @@ if file_sabana and file_pbi26:
                 st.divider()
                 st.subheader("💡 ¿Cómo mejorar la Estabilidad?")
                 st.markdown("""
-                1.  **Foco en el primer año:** El momento
+                1.  **Foco en el primer año:** El momento de mayor riesgo de fuga ocurre antes del primer aniversario. Usa la tabla de *Alertas Q4* para detectar qué colaboradores están a punto de cumplir su primer año.
+                2.  **Análisis Demográfico:** Utiliza la pestaña de Análisis para detectar qué secciones o puestos están sufriendo una fuga de talento por debajo de la media.
+                3.  **Simulación:** Anticípate a fin de año simulando bajas.
+                """)
+
+    except Exception as e:
+        import traceback
+        st.error(f"Error crítico procesando los datos: {e}")
+        st.code(traceback.format_exc())
